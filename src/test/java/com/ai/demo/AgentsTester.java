@@ -19,6 +19,59 @@ import org.springframework.ai.tool.function.FunctionToolCallback;
 
 public class AgentsTester {
 
+    /**
+     * ------------------------System Prompt系统提示词----------------
+     ***/
+    @Test
+    public void test7() throws GraphRunnerException {
+        //通过instruction 指定更加详细的指令
+        String instruction = """
+                你是一个经验丰富的软件架构师。
+                
+                在回答问题时，请：
+                1. 首先理解用户的核心需求
+                2. 分析可能的技术方案
+                3. 提供清晰的建议和理由
+                4. 如果需要更多信息，主动询问
+                
+                保持专业、友好的语气。
+                """;
+        ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
+        ReactAgent agent = ReactAgent.builder()
+                .name("architect_agent")
+                .model(chatModel)
+                .instruction(instruction)
+                .build();
+
+        AssistantMessage message = agent.call("设计一个答题系统");
+        System.out.println(message.getText());
+    }
+
+
+    @Test
+    public void test6() throws GraphRunnerException {
+        //创建tool 类
+        ToolCallback searchTool = FunctionToolCallback.builder("search",
+                        new SearchTool())
+                .description("通过给定的参数查询线上新闻并返回结果") //定义工具描述，提供给模型的使用指南
+                .inputType(SearchToolInput.class)
+                .build();
+
+        //通过SystemPrompt方法控制简单的系统提示词
+        ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
+        ReactAgent searchAgent = ReactAgent.builder()
+                .model(chatModel) //设置model
+                .name("search_agent") //设置agent的名称
+                .tools(searchTool)
+                .interceptors(new ToolErrorInterceptor())
+                .systemPrompt("调用工具输出什么，模型就输出什么，不能进行修改、添加、删除。")
+                .build();
+
+        AssistantMessage message = searchAgent.call("今天的新闻有哪些?");
+        System.out.println(message.getText());
+    }
+
+
     /** ------------------------agent的核心组件Tools和Interceptor----------------***/
 
     /**
