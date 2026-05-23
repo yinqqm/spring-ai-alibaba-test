@@ -8,6 +8,7 @@ import com.ai.demo.tool.CreateChatClient;
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
+import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
@@ -17,7 +18,31 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 
+import java.util.Optional;
+
 public class AgentsTester {
+
+
+    /**
+     * 获取完整状态
+     *
+     * @throws GraphRunnerException
+     */
+    @Test
+    public void test8() throws GraphRunnerException {
+        ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
+        ReactAgent getAllState = ReactAgent.builder()
+                .model(chatModel)
+                .name("get_all_state")
+                .build();
+        Optional<OverAllState> result = getAllState.invoke("帮我写一首诗");
+        if (result.isPresent()) {
+            OverAllState overAllState = result.get();
+            Optional<Object> messages = overAllState.value("messages");
+
+            System.out.println("完整状态：" + overAllState);
+        }
+    }
 
     /**
      * ------------------------System Prompt系统提示词----------------
@@ -115,7 +140,7 @@ public class AgentsTester {
                 .interceptors(new ToolErrorInterceptor())
                 .systemPrompt("调用工具输出什么，模型就输出什么，不能进行修改、添加、删除。")
                 .build();
-        AssistantMessage assistantMessage = searchAgent.call("请搜索昨天发生了哪些新文？");
+        AssistantMessage assistantMessage = searchAgent.call("请搜索昨天发生了哪些新闻？");
         System.out.println("结果是：" + assistantMessage.getText());
     }
 
@@ -143,7 +168,7 @@ public class AgentsTester {
         System.out.println("结果是：" + assistantMessage.getText());
     }
 
-    /** ------------------------agent的核心组件模型----------------***/
+    /** ------------------------agent的核心组件 模型----------------***/
     /**
      * 高级模型配置
      */
