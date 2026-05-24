@@ -72,7 +72,10 @@ public class AgentsTester {
         System.out.println(message.getText());
     }
 
-
+    /**
+     * 工具错误处理
+     * @throws GraphRunnerException
+     */
     @Test
     public void test6() throws GraphRunnerException {
         //创建tool 类
@@ -100,7 +103,7 @@ public class AgentsTester {
     /** ------------------------agent的核心组件Tools和Interceptor----------------***/
 
     /**
-     * 模型拦截器
+     * 模型拦截器示例
      */
     @Test
     public void test5() throws GraphRunnerException {
