@@ -15,6 +15,7 @@ public class ToolErrorInterceptor extends ToolInterceptor {
                 return ToolCallResponse.of(request.getToolCallId(), request.getToolName(),
                         "查询条件中包含敏感词语，请重新输入");
             }
+            //调用工具
             ToolCallResponse callResponse = handler.call(request);
             return callResponse;
         } catch (Exception e) {
