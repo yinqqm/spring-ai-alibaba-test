@@ -11,7 +11,9 @@ import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
+import com.alibaba.cloud.ai.graph.store.stores.MemoryStore;
 import org.junit.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
@@ -23,6 +25,38 @@ import java.util.Map;
 import java.util.Optional;
 
 public class AgentsTester {
+
+
+    /**
+     * 使用配置,测试threadId实现不同用户之间使用不同的上下文信息
+     */
+    @Test
+    public void test9() throws GraphRunnerException {
+        ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
+        ReactAgent agent = ReactAgent.builder()
+                .name("runnable_config")
+                .model(chatModel)
+                .saver(new MemorySaver())
+                .build();
+        //通过RunnableConfig 传递运行时配置
+        String threadId123 = "thread_123";
+        String threadId456 = "thread_456";
+        RunnableConfig runnableConfig123 = RunnableConfig.builder()
+                .threadId(threadId123)
+                .build();
+        RunnableConfig runnableConfig456 = RunnableConfig.builder()
+                .threadId(threadId456)
+                .build();
+        agent.call("我叫123",runnableConfig123);
+        agent.call("我叫456",runnableConfig456);
+
+
+        AssistantMessage response123 = agent.call("我叫什么？",runnableConfig123);
+        System.out.println("runnableConfig123:"+response123.getText());
+        AssistantMessage response456 = agent.call("我叫什么？",runnableConfig456);
+        System.out.println("runnableConfig456:"+response456.getText());
+
+    }
 
 
 
@@ -51,7 +85,7 @@ public class AgentsTester {
             // 访问自定义状态
             Optional<Object> customData = overAllState.value("custom_key");
             if (customData.isPresent()) {
-                System.out.println("custom_key:" + customData);
+                System.out.println("获取设置的custom_key:" + customData);
             }
             System.out.println("完整状态：" + overAllState);
         }
