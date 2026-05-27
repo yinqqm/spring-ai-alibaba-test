@@ -8,12 +8,12 @@ import com.ai.demo.tool.CreateChatClient;
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
+import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
-import com.alibaba.cloud.ai.graph.store.stores.MemoryStore;
 import org.junit.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
@@ -26,6 +26,77 @@ import java.util.Optional;
 
 public class AgentsTester {
 
+    /**
+     * metaData之Tool的使用
+     * @throws GraphRunnerException
+     */
+    @Test
+    public void test12() throws GraphRunnerException {
+        ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
+
+        ReactAgent agent = ReactAgent.builder()
+                .model(chatModel)
+                .name("context_test")
+                .build();
+
+        RunnableConfig runnableConfig = RunnableConfig.builder()
+                .streamMode(CompiledGraph.StreamMode.SNAPSHOTS)
+                .build();
+        AssistantMessage message = agent.call("你有什么功能?", runnableConfig);
+        System.out.println(message.getText());
+    }
+
+
+
+
+    /**
+     * metaData之Tool的使用
+     * @throws GraphRunnerException
+     */
+    @Test
+    public void test11() throws GraphRunnerException {
+
+        //创建tool 类
+        ToolCallback searchTool = FunctionToolCallback.
+                builder("search", new SearchTool()).description("通过给定的参数查询线上新闻并返回结果") //定义工具描述，提供给模型的使用指南
+                .inputType(SearchToolInput.class).build();
+
+        ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
+        ReactAgent metaDataTool = ReactAgent.builder()
+                .name("meta_data_tool")
+                .model(chatModel)
+                .tools(searchTool)
+                .build();
+
+        //创建RunnableConfig
+        RunnableConfig runnableConfig = RunnableConfig.builder()
+                .addMetadata("call_tool", "yes")
+                .build();
+
+        AssistantMessage assistantMessage = metaDataTool.call("今天发生了什么新闻", runnableConfig);
+
+        System.out.println(assistantMessage.getText());
+
+    }
+
+
+    /**
+     * metaData之Interceptor的使用
+     * @throws GraphRunnerException
+     */
+    @Test
+    public void test10() throws GraphRunnerException {
+
+        ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
+        ReactAgent agent = ReactAgent.builder()
+                .name("model_interceptor_agent")
+                .model(chatModel)
+                .interceptors(new DynamicPromptInterceptor()).build();
+        //通过runnableConfig指定配置信息
+        RunnableConfig runnableConfig = RunnableConfig.builder().addMetadata("user_role", "expert").build();
+        AssistantMessage assistantMessage = agent.call("介绍一下Spring boot的自动注入原理。", runnableConfig);
+        System.out.println(assistantMessage.getText());
+    }
 
     /**
      * 使用配置,测试threadId实现不同用户之间使用不同的上下文信息
@@ -47,17 +118,16 @@ public class AgentsTester {
         RunnableConfig runnableConfig456 = RunnableConfig.builder()
                 .threadId(threadId456)
                 .build();
-        agent.call("我叫123",runnableConfig123);
-        agent.call("我叫456",runnableConfig456);
+        agent.call("我叫123", runnableConfig123);
+        agent.call("我叫456", runnableConfig456);
 
 
-        AssistantMessage response123 = agent.call("我叫什么？",runnableConfig123);
-        System.out.println("runnableConfig123:"+response123.getText());
-        AssistantMessage response456 = agent.call("我叫什么？",runnableConfig456);
-        System.out.println("runnableConfig456:"+response456.getText());
+        AssistantMessage response123 = agent.call("我叫什么？", runnableConfig123);
+        System.out.println("runnableConfig123:" + response123.getText());
+        AssistantMessage response456 = agent.call("我叫什么？", runnableConfig456);
+        System.out.println("runnableConfig456:" + response456.getText());
 
     }
-
 
 
     /**
