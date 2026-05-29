@@ -141,8 +141,9 @@ public class AgentsTester {
     public void test8() throws GraphRunnerException {
         // ★ 关键：通过 Map 传入自定义状态（messages/input 之外的都是自定义状态）
         Map<String, Object> inputs = new HashMap<>();
-        inputs.put("input", "帮我写一首诗");           // 预留关键字：用户输入
-        inputs.put("messages", Messageutils.convertToMessages("帮我写一首诗"));
+        String inputMessage = "帮我写一首诗";
+        inputs.put("input", inputMessage);           // 预留关键字：用户输入
+        inputs.put("messages", Messageutils.convertToMessages(inputMessage));
         inputs.put("custom_key", "这是我在test8中设置的值");   // ★ 自定义状态
         inputs.put("user_role", "admin");              // ★ 自定义状态
         inputs.put("session_id", "sess_001");          // ★ 自定义状态
