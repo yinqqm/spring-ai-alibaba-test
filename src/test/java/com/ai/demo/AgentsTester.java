@@ -1,9 +1,6 @@
 package com.ai.demo;
 
-import com.ai.demo.agent.DynamicPromptInterceptor;
-import com.ai.demo.agent.SearchTool;
-import com.ai.demo.agent.SearchToolInput;
-import com.ai.demo.agent.ToolErrorInterceptor;
+import com.ai.demo.agent.*;
 import com.ai.demo.tool.CreateChatClient;
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
@@ -14,6 +11,7 @@ import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
+import com.alibaba.cloud.ai.graph.utils.Messageutils;
 import org.junit.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
@@ -26,27 +24,30 @@ import java.util.Optional;
 
 public class AgentsTester {
 
+    /**---------------------------高级特性-------------------***/
     /**
-     * metaData之Tool的使用
+     * 格式化输出
      * @throws GraphRunnerException
      */
     @Test
-    public void test12() throws GraphRunnerException {
+    public void test13() throws GraphRunnerException {
         ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
 
         ReactAgent agent = ReactAgent.builder()
+                .name("format_agent_output_type")
                 .model(chatModel)
-                .name("context_test")
+                .outputType(PoemOutput.class)
                 .build();
 
-        RunnableConfig runnableConfig = RunnableConfig.builder()
-                .streamMode(CompiledGraph.StreamMode.SNAPSHOTS)
-                .build();
-        AssistantMessage message = agent.call("你有什么功能?", runnableConfig);
+        AssistantMessage message = agent.call("编写一篇描述夏天的散文");
+        //输出会遵循PoemOutput的结构
         System.out.println(message.getText());
     }
 
 
+
+
+    /**---------------------------agent 的调用-------------------***/
 
 
     /**
@@ -141,14 +142,19 @@ public class AgentsTester {
         // ★ 关键：通过 Map 传入自定义状态（messages/input 之外的都是自定义状态）
         Map<String, Object> inputs = new HashMap<>();
         inputs.put("input", "帮我写一首诗");           // 预留关键字：用户输入
+        inputs.put("messages", Messageutils.convertToMessages("帮我写一首诗"));
         inputs.put("custom_key", "这是我在test8中设置的值");   // ★ 自定义状态
         inputs.put("user_role", "admin");              // ★ 自定义状态
         inputs.put("session_id", "sess_001");          // ★ 自定义状态
         inputs.put("request_count", 0);                // ★ 自定义状态
 
         ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
-        ReactAgent getAllState = ReactAgent.builder().model(chatModel).name("get_all_state").build();
-        Optional<OverAllState> result = getAllState.invoke(inputs);
+        ReactAgent getAllState = ReactAgent.builder()
+                .model(chatModel)
+                .name("get_all_state")
+               // .instruction("你是一个助手，请根据用户输入完成任务。")
+                .build();
+        Optional<OverAllState> result =  getAllState.invoke(inputs);
         if (result.isPresent()) {
             OverAllState overAllState = result.get();
             Optional<Object> messages = overAllState.value("messages");
