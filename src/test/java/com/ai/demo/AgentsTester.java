@@ -5,7 +5,6 @@ import com.ai.demo.tool.CreateChatClient;
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
-import com.alibaba.cloud.ai.graph.CompiledGraph;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
@@ -15,6 +14,7 @@ import com.alibaba.cloud.ai.graph.utils.Messageutils;
 import org.junit.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 
@@ -24,9 +24,62 @@ import java.util.Optional;
 
 public class AgentsTester {
 
+
+
+
+
     /**---------------------------高级特性-------------------***/
+
     /**
-     * 格式化输出
+     * memory，测试环境可以使用Memory saver
+     * 但是生产环境推荐使用：RedisSaver、MongoSaver等持久化的Saver
+     */
+    @Test
+    public void test15() throws GraphRunnerException {
+        ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
+        // 配置内存存储
+        ReactAgent agent = ReactAgent.builder()
+                .name("memory_agent")
+                .model(chatModel)
+                .saver(new MemorySaver())
+                .build();
+
+// 使用 thread_id 维护对话上下文
+        RunnableConfig config = RunnableConfig.builder()
+                .threadId("user_123")
+                .build();
+
+        agent.call("我叫张三", config);
+        AssistantMessage message = agent.call("我叫什么名字？", config);// 输出: "你叫张三"
+        System.out.println(message.getText());
+    }
+
+
+    /**
+     * 通过outputSchema 格式化输出
+     * @throws GraphRunnerException
+     */
+    @Test
+    public void test14() throws GraphRunnerException {
+        ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
+        BeanOutputConverter<TextAnalysisResult> outputConverter = new BeanOutputConverter<>(TextAnalysisResult.class);
+        String format = outputConverter.getFormat();
+        ReactAgent agent = ReactAgent.builder()
+                .name("output_schema")
+                .model(chatModel)
+                .outputSchema(format)
+                .build();
+
+        AssistantMessage message = agent.call("分析这段文本：这个鞋子很舒服，不错。");
+        System.out.println(message.getText());
+
+
+    }
+
+
+
+    /**
+     * 结构化输出，通过outputType的方式来进行格式化输出
      * @throws GraphRunnerException
      */
     @Test
