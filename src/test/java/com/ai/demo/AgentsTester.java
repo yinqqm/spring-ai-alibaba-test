@@ -31,11 +31,20 @@ public class AgentsTester {
     /**---------------------------高级特性-------------------***/
 
     /**
+     * Hook测试之AgentHook的测试
+     */
+    @Test
+    public void test17(){
+
+    }
+
+
+    /**
      * memory，测试环境可以使用Memory saver
      * 但是生产环境推荐使用：RedisSaver、MongoSaver等持久化的Saver
      */
     @Test
-    public void test15() throws GraphRunnerException {
+    public void test16() throws GraphRunnerException {
         ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
         // 配置内存存储
         ReactAgent agent = ReactAgent.builder()
@@ -51,6 +60,36 @@ public class AgentsTester {
 
         agent.call("我叫张三", config);
         AssistantMessage message = agent.call("我叫什么名字？", config);// 输出: "你叫张三"
+        System.out.println(message.getText());
+    }
+
+
+    /**
+     * 通过outputSchema 格式化输出，通过自定义outputSchema方式
+     * @throws GraphRunnerException
+     */
+    @Test
+    public void test15() throws GraphRunnerException {
+        ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
+        BeanOutputConverter<TextAnalysisResult> outputConverter = new BeanOutputConverter<>(TextAnalysisResult.class);
+        String jsonSchema = outputConverter.getJsonSchema();
+        String template = """
+				Your response should be in JSON format.
+				Do not include any explanations, only provide a RFC8259 compliant JSON response following this format without deviation.
+				Do not include markdown code blocks in your response.
+				Remove the ```json markdown from the output.
+				Here is the JSON Schema instance your output must remove spentTimeSeconds properties:
+				```%s```
+				""";
+        String format = String.format(template, jsonSchema);
+
+        ReactAgent agent = ReactAgent.builder()
+                .name("output_schema")
+                .model(chatModel)
+                .outputSchema(format)
+                .build();
+
+        AssistantMessage message = agent.call("分析这段文本：这个鞋子很舒服，不错。");
         System.out.println(message.getText());
     }
 
@@ -72,8 +111,6 @@ public class AgentsTester {
 
         AssistantMessage message = agent.call("分析这段文本：这个鞋子很舒服，不错。");
         System.out.println(message.getText());
-
-
     }
 
 

@@ -8,15 +8,15 @@ public class TextAnalysisResult {
     private String sentiment;
     private Double confidence;
     private String originalText;
-//    private Double spentTimeSeconds;
-//
-//    public Double getSpentTimeSeconds() {
-//        return spentTimeSeconds;
-//    }
-//
-//    public void setSpentTimeSeconds(Double spentTimeSeconds) {
-//        this.spentTimeSeconds = spentTimeSeconds;
-//    }
+    private Double spentTimeSeconds;
+
+    public Double getSpentTimeSeconds() {
+        return spentTimeSeconds;
+    }
+
+    public void setSpentTimeSeconds(Double spentTimeSeconds) {
+        this.spentTimeSeconds = spentTimeSeconds;
+    }
 
     public String getOriginalText() {
         return originalText;

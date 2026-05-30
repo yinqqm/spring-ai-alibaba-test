@@ -5,15 +5,6 @@ public class PoemOutput {
     private String content;
     private String style;
     private String author;
-    private float price;
-
-    public float getPrice() {
-        return price;
-    }
-
-    public void setPrice(float price) {
-        this.price = price;
-    }
 
     public String getAuthor() {
         return author;
