@@ -23,7 +23,6 @@ public class LoggingHook  extends AgentHook {
     @Override
     public CompletableFuture<Map<String, Object>> beforeAgent(OverAllState state, RunnableConfig config) {
         System.out.println("Agent 开始执行");
-
         return super.beforeAgent(state, config);
     }
 

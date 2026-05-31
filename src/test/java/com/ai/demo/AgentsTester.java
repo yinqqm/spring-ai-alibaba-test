@@ -29,12 +29,43 @@ public class AgentsTester {
 
 
     /**---------------------------高级特性-------------------***/
+    /**
+     * Hook测试之ModelHook的测试
+     * 一次agent call 多次调用模型
+     */
+    @Test
+    public void test18() throws GraphRunnerException {
+        ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
+        ToolCallback searchTool = FunctionToolCallback.
+                builder("search", new SearchTool()).description("通过给定的参数查询线上新闻并返回结果") //定义工具描述，提供给模型的使用指南
+                .inputType(SearchToolInput.class).build();
+        //创建ModelHooks
+        MessageTrimmingHook messageTrimmingHook = new MessageTrimmingHook();
+        ReactAgent modelHook = ReactAgent.builder()
+                .name("model_hook")
+                .model(chatModel)
+                .tools(searchTool)
+                .hooks(messageTrimmingHook)
+                .build();
+        modelHook.call("今天的新闻有哪些？");
+    }
+
+
 
     /**
      * Hook测试之AgentHook的测试
      */
     @Test
-    public void test17(){
+    public void test17() throws GraphRunnerException {
+        ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
+        LoggingHook loggingHook = new LoggingHook();
+        ReactAgent agentHook = ReactAgent.builder()
+                .name("agent_hook")
+                .model(chatModel)
+                .hooks(loggingHook)
+                .build();
+        AssistantMessage message = agentHook.call("你是谁?");
+        System.out.println(message.getText());
 
     }
 
