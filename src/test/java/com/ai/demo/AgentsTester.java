@@ -8,6 +8,7 @@ import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.alibaba.cloud.ai.graph.agent.hook.modelcalllimit.ModelCallLimitHook;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
 import com.alibaba.cloud.ai.graph.utils.Messageutils;
@@ -23,12 +24,31 @@ import java.util.Map;
 import java.util.Optional;
 
 public class AgentsTester {
-
-
-
-
-
     /**---------------------------高级特性-------------------***/
+    /**
+     * 通过Hook来实现模型调用次数的控制
+      */
+    @Test
+    public void test19() throws GraphRunnerException {
+        ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
+        ToolCallback searchTool = FunctionToolCallback.
+                builder("search", new SearchTool()).description("通过给定的参数查询线上新闻并返回结果") //定义工具描述，提供给模型的使用指南
+                .inputType(SearchToolInput.class).build();
+        ToolCallback weatherSearchTool = FunctionToolCallback.
+                builder("weatherSearch", new WeatherSearchTool()).description("通过给定的城市名查询天气并返回结果") //定义工具描述，提供给模型的使用指南
+                .inputType(SearchToolInput.class).build();
+        ReactAgent modelHook = ReactAgent.builder()
+                .name("model_hook")
+                .model(chatModel)
+                .tools(searchTool,weatherSearchTool)
+                .hooks(ModelCallLimitHook.builder().runLimit(10).build())
+                .build();
+        AssistantMessage message = modelHook.call("今天的新闻有哪些和天气怎么样？");
+        System.out.println(message.getText());
+
+    }
+
+
     /**
      * Hook测试之ModelHook的测试
      * 一次agent call 多次调用模型
@@ -41,11 +61,12 @@ public class AgentsTester {
                 .inputType(SearchToolInput.class).build();
         //创建ModelHooks
         MessageTrimmingHook messageTrimmingHook = new MessageTrimmingHook();
+        LoggingHook loggingHook = new LoggingHook();
         ReactAgent modelHook = ReactAgent.builder()
                 .name("model_hook")
                 .model(chatModel)
                 .tools(searchTool)
-                .hooks(messageTrimmingHook)
+                .hooks(messageTrimmingHook,loggingHook)
                 .build();
         modelHook.call("今天的新闻有哪些？");
     }
@@ -66,6 +87,7 @@ public class AgentsTester {
                 .build();
         AssistantMessage message = agentHook.call("你是谁?");
         System.out.println(message.getText());
+        agentHook.call("你的作用是什么");
 
     }
 
@@ -109,7 +131,7 @@ public class AgentsTester {
 				Do not include any explanations, only provide a RFC8259 compliant JSON response following this format without deviation.
 				Do not include markdown code blocks in your response.
 				Remove the ```json markdown from the output.
-				Here is the JSON Schema instance your output must remove spentTimeSeconds properties:
+				Here is the JSON Schema instance your output and you must remove spentTimeSeconds properties:
 				```%s```
 				""";
         String format = String.format(template, jsonSchema);
