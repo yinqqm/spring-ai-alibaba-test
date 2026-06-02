@@ -31,19 +31,24 @@ public class AgentsTester {
     @Test
     public void test19() throws GraphRunnerException {
         ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
-        ToolCallback searchTool = FunctionToolCallback.
-                builder("search", new SearchTool()).description("通过给定的参数查询线上新闻并返回结果") //定义工具描述，提供给模型的使用指南
-                .inputType(SearchToolInput.class).build();
-        ToolCallback weatherSearchTool = FunctionToolCallback.
-                builder("weatherSearch", new WeatherSearchTool()).description("通过给定的城市名查询天气并返回结果") //定义工具描述，提供给模型的使用指南
-                .inputType(SearchToolInput.class).build();
+        ToolCallback chunkTool = FunctionToolCallback.builder("chunkTool", new ChunkTool())
+                .description("根据索引返回一段内容，方便agent 通过多轮 tool 调用逐步获得所有内容")
+                .inputType(SearchToolInput.class)
+                .build();
+        ModelLoggingHook modelLoggingHook = new ModelLoggingHook();
         ReactAgent modelHook = ReactAgent.builder()
                 .name("model_hook")
                 .model(chatModel)
-                .tools(searchTool,weatherSearchTool)
-                .hooks(ModelCallLimitHook.builder().runLimit(10).build())
+                .tools(chunkTool)
+                //配置一次agent call最多只能调用7次LLM
+                .hooks(ModelCallLimitHook.builder().runLimit(7).build(),modelLoggingHook)
                 .build();
-        AssistantMessage message = modelHook.call("今天的新闻有哪些和天气怎么样？");
+        AssistantMessage message = modelHook.call("""
+                请严格按照顺序完成：
+                1.依次调用chunkTool的apply方法，从SearchToolInput的query属性的值从0到7.
+                2.每次只处理一段，不要跳步.
+                3.最后用中文总结所有内容.
+                """);
         System.out.println(message.getText());
 
     }
@@ -56,19 +61,26 @@ public class AgentsTester {
     @Test
     public void test18() throws GraphRunnerException {
         ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
-        ToolCallback searchTool = FunctionToolCallback.
-                builder("search", new SearchTool()).description("通过给定的参数查询线上新闻并返回结果") //定义工具描述，提供给模型的使用指南
-                .inputType(SearchToolInput.class).build();
+        ToolCallback chunkTool = FunctionToolCallback.builder("chunkTool", new ChunkTool())
+                .description("根据索引返回一段内容，方便agent 通过多轮 tool 调用逐步获得所有内容")
+                .inputType(SearchToolInput.class)
+                .build();
         //创建ModelHooks
         MessageTrimmingHook messageTrimmingHook = new MessageTrimmingHook();
         LoggingHook loggingHook = new LoggingHook();
         ReactAgent modelHook = ReactAgent.builder()
                 .name("model_hook")
                 .model(chatModel)
-                .tools(searchTool)
+                .tools(chunkTool)
                 .hooks(messageTrimmingHook,loggingHook)
                 .build();
-        modelHook.call("今天的新闻有哪些？");
+        AssistantMessage message = modelHook.call("""
+                请严格按照顺序完成：
+                1.依次调用chunkTool的apply方法，从SearchToolInput的query属性的值从0到7.
+                2.每次只处理一段，不要跳步.
+                3.最后用中文总结所有内容.
+                """);
+        System.out.println(message.getText());
     }
 
 
