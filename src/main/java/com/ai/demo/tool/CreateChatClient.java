@@ -8,6 +8,9 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.api.OllamaApi;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
+import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.ai.openai.api.OpenAiApi;
 
 public final class CreateChatClient {
 
@@ -34,6 +37,22 @@ public final class CreateChatClient {
                 ollamaApi(ollamaApi).
                 defaultOptions(OllamaChatOptions.builder().model(modelName)
                         .build()).build();
+        return chatModel;
+    }
+
+
+    public static ChatModel createOpenAIModel() {
+        OpenAiApi openAiAp = OpenAiApi.builder()
+                .apiKey("your deepseek token")
+                .baseUrl("https://api.deepseek.com")
+                .build();
+        OpenAiChatModel chatModel = OpenAiChatModel.builder()
+                .openAiApi(openAiAp)
+                .defaultOptions(OpenAiChatOptions.builder()
+                        .model("deepseek-v4-flash")
+                        .temperature(0.7)
+                        .build())
+                .build();
         return chatModel;
     }
 

@@ -18,7 +18,7 @@ import java.util.List;
 @HookPositions({HookPosition.BEFORE_MODEL,HookPosition.AFTER_MODEL})
 public class MessageTrimmingHook extends MessagesModelHook {
 
-    private static final Integer MAX_MESSAGES_NUM = 20;
+    private static final Integer MAX_MESSAGES_NUM = 15;
 
     /**
      *

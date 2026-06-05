@@ -5,29 +5,178 @@ import com.ai.demo.tool.CreateChatClient;
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
+import com.alibaba.cloud.ai.graph.NodeOutput;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.RunnableConfig;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
 import com.alibaba.cloud.ai.graph.agent.hook.modelcalllimit.ModelCallLimitHook;
 import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
 import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
+import com.alibaba.cloud.ai.graph.streaming.OutputType;
+import com.alibaba.cloud.ai.graph.streaming.StreamingOutput;
 import com.alibaba.cloud.ai.graph.utils.Messageutils;
 import org.junit.Test;
 import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.ai.chat.messages.ToolResponseMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.function.FunctionToolCallback;
+import reactor.core.publisher.Flux;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
 
 public class AgentsTester {
     /**---------------------------高级特性-------------------***/
+
+    /**
+     * 流式输出
+     *
+     * @throws GraphRunnerException
+     */
+    @Test
+    public void test21() throws GraphRunnerException, InterruptedException {
+
+        ToolCallback searchTool = FunctionToolCallback.
+                builder("search", new SearchTool()).description("通过给定的参数查询线上新闻并返回结果") //定义工具描述，提供给模型的使用指南
+                .inputType(SearchToolInput.class).build();
+
+        ChatModel openAIModel = CreateChatClient.createOpenAIModel();
+        ReactAgent thinkingAgent = ReactAgent.builder()
+                .model(openAIModel)
+                .name("thinking_agent")
+                .tools(searchTool)
+                .build();
+
+        Flux<NodeOutput> stream = thinkingAgent.stream("今天发生了什么新闻");
+
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        stream.subscribe(output -> {
+                    if (output instanceof StreamingOutput streamingOutput) {
+                        OutputType type = streamingOutput.getOutputType();
+                        Message message = streamingOutput.message();
+
+                        // 处理模型流式输出
+                        if (type == OutputType.AGENT_MODEL_STREAMING) {
+                            if (message instanceof AssistantMessage assistantMessage) {
+                                // 检查是否为 Thinking 消息
+                                Object reasoningContent = assistantMessage.getMetadata().get("reasoningContent");
+                                if (reasoningContent != null && !reasoningContent.toString().isEmpty()) {
+                                    System.out.print("[Thinking] " + reasoningContent);
+                                } else {
+                                    // 普通模型响应（增量内容）
+                                    System.out.print(assistantMessage.getText());
+                                }
+                            }
+                        }
+                        // 处理模型输出完成
+                        else if (type == OutputType.AGENT_MODEL_FINISHED) {
+                            if (message instanceof AssistantMessage assistantMessage) {
+                                if (assistantMessage.hasToolCalls()) {
+                                    // 工具调用请求
+                                    assistantMessage.getToolCalls().forEach(toolCall -> {
+                                        System.out.println("[Tool Call] " + toolCall.name() + ": " + toolCall.arguments());
+                                    });
+                                } else {
+                                    // 模型完整响应
+                                    System.out.println("\n[Model Finished]");
+                                }
+                            }
+                        }
+                        // 处理工具执行结果
+                        else if (type == OutputType.AGENT_TOOL_FINISHED) {
+                            if (message instanceof ToolResponseMessage toolResponse) {
+                                toolResponse.getResponses().forEach(response -> {
+                                    System.out.println("[Tool Result] " + response.name() + ": " + response.responseData());
+                                });
+                            }
+                        }
+                    }
+                },
+                error -> {
+                    System.err.println("错误: " + error);
+                }, () -> {
+                    countDownLatch.countDown();
+                });
+        countDownLatch.await();
+    }
+
+
+    /**
+     * 流式输出
+     *
+     * @throws GraphRunnerException
+     */
+    @Test
+    public void test20() throws GraphRunnerException, InterruptedException {
+        //创建tool 类
+        ToolCallback searchTool = FunctionToolCallback.
+                builder("search", new SearchTool()).description("通过给定的参数查询线上新闻并返回结果") //定义工具描述，提供给模型的使用指南
+                .inputType(SearchToolInput.class).build();
+
+        ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
+        ReactAgent metaDataTool = ReactAgent.builder()
+                .name("meta_data_tool")
+                .model(chatModel)
+                .tools(searchTool)
+                .hooks(new LoggingHook())
+                .build();
+
+
+        Flux<NodeOutput> stream = metaDataTool.stream("今天发生了什么新闻");
+
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+
+        stream.subscribe(
+                output -> {
+                    // 检查是否为 StreamingOutput 类型
+                    if (output instanceof StreamingOutput streamingOutput) {
+                        OutputType type = streamingOutput.getOutputType();
+
+                        // 处理模型推理的流式输出
+                        if (type == OutputType.AGENT_MODEL_STREAMING) {
+                            // 流式增量内容，逐步显示
+                            System.out.print("<<<<<流式增量内容，逐步显示:>>>>" + streamingOutput.message().getText());
+                        } else if (type == OutputType.AGENT_MODEL_FINISHED) {
+                            // 模型推理完成，可获取完整响应
+                            System.out.println("\n模型输出完成");
+                        }
+
+                        if (type == OutputType.AGENT_TOOL_STREAMING) {
+                            System.out.println("<<<Tool增量内容>>> " + streamingOutput.message().getText());
+                        }
+
+                        // 处理工具调用完成（目前不支持 STREAMING）
+                        if (type == OutputType.AGENT_TOOL_FINISHED) {
+                            System.out.println("工具调用完成: " + output.node());
+                        }
+                        if (type == OutputType.AGENT_HOOK_STREAMING) {
+                            System.out.println("<<<<Hook增量内容>>>> " + streamingOutput.message().getText());
+                        }
+                        // 对于 Hook 节点，通常只关注完成事件（如果Hook没有有效输出可以忽略）
+                        if (type == OutputType.AGENT_HOOK_FINISHED) {
+                            System.out.println("Hook 执行完成: " + output.node());
+                        }
+                    }
+                },
+                error -> {
+                    System.err.println("错误: " + error);
+                },
+                () -> {
+                    countDownLatch.countDown();
+                }
+        );
+        countDownLatch.await();
+    }
+
+
     /**
      * 通过Hook来实现模型调用次数的控制
-      */
+     */
     @Test
     public void test19() throws GraphRunnerException {
         ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
@@ -41,7 +190,7 @@ public class AgentsTester {
                 .model(chatModel)
                 .tools(chunkTool)
                 //配置一次agent call最多只能调用7次LLM
-                .hooks(ModelCallLimitHook.builder().runLimit(7).build(),modelLoggingHook)
+                .hooks(ModelCallLimitHook.builder().runLimit(7).build(), modelLoggingHook)
                 .build();
         AssistantMessage message = modelHook.call("""
                 请严格按照顺序完成：
@@ -72,7 +221,7 @@ public class AgentsTester {
                 .name("model_hook")
                 .model(chatModel)
                 .tools(chunkTool)
-                .hooks(messageTrimmingHook,loggingHook)
+                .hooks(messageTrimmingHook, loggingHook)
                 .build();
         AssistantMessage message = modelHook.call("""
                 请严格按照顺序完成：
@@ -82,7 +231,6 @@ public class AgentsTester {
                 """);
         System.out.println(message.getText());
     }
-
 
 
     /**
@@ -131,6 +279,7 @@ public class AgentsTester {
 
     /**
      * 通过outputSchema 格式化输出，通过自定义outputSchema方式
+     *
      * @throws GraphRunnerException
      */
     @Test
@@ -139,13 +288,13 @@ public class AgentsTester {
         BeanOutputConverter<TextAnalysisResult> outputConverter = new BeanOutputConverter<>(TextAnalysisResult.class);
         String jsonSchema = outputConverter.getJsonSchema();
         String template = """
-				Your response should be in JSON format.
-				Do not include any explanations, only provide a RFC8259 compliant JSON response following this format without deviation.
-				Do not include markdown code blocks in your response.
-				Remove the ```json markdown from the output.
-				Here is the JSON Schema instance your output and you must remove spentTimeSeconds properties:
-				```%s```
-				""";
+                Your response should be in JSON format.
+                Do not include any explanations, only provide a RFC8259 compliant JSON response following this format without deviation.
+                Do not include markdown code blocks in your response.
+                Remove the ```json markdown from the output.
+                Here is the JSON Schema instance your output and you must remove spentTimeSeconds properties:
+                ```%s```
+                """;
         String format = String.format(template, jsonSchema);
 
         ReactAgent agent = ReactAgent.builder()
@@ -161,6 +310,7 @@ public class AgentsTester {
 
     /**
      * 通过outputSchema 格式化输出
+     *
      * @throws GraphRunnerException
      */
     @Test
@@ -179,9 +329,9 @@ public class AgentsTester {
     }
 
 
-
     /**
      * 结构化输出，通过outputType的方式来进行格式化输出
+     *
      * @throws GraphRunnerException
      */
     @Test
@@ -200,13 +350,12 @@ public class AgentsTester {
     }
 
 
-
-
     /**---------------------------agent 的调用-------------------***/
 
 
     /**
      * metaData之Tool的使用
+     *
      * @throws GraphRunnerException
      */
     @Test
@@ -238,6 +387,7 @@ public class AgentsTester {
 
     /**
      * metaData之Interceptor的使用
+     *
      * @throws GraphRunnerException
      */
     @Test
@@ -308,9 +458,9 @@ public class AgentsTester {
         ReactAgent getAllState = ReactAgent.builder()
                 .model(chatModel)
                 .name("get_all_state")
-               // .instruction("你是一个助手，请根据用户输入完成任务。")
+                // .instruction("你是一个助手，请根据用户输入完成任务。")
                 .build();
-        Optional<OverAllState> result =  getAllState.invoke(inputs);
+        Optional<OverAllState> result = getAllState.invoke(inputs);
         if (result.isPresent()) {
             OverAllState overAllState = result.get();
             Optional<Object> messages = overAllState.value("messages");
