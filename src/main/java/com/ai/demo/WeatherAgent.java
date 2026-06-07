@@ -1,5 +1,6 @@
 package com.ai.demo;
 
+import com.ai.demo.tool.CreateChatClient;
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.graph.agent.ReactAgent;
@@ -15,14 +16,7 @@ import org.springframework.ai.tool.function.FunctionToolCallback;
  */
 public class WeatherAgent {
     public static void main(String[] args) {
-        // 初始化 ChatModel
-        DashScopeApi dashScopeApi = DashScopeApi.builder()
-                .apiKey(System.getenv("AI_DASHSCOPE_API_KEY"))
-                .build();
-
-        ChatModel chatModel = DashScopeChatModel.builder()
-                .dashScopeApi(dashScopeApi)
-                .build();
+        ChatModel chatModel = CreateChatClient.createDefaultOllamaChatModel();
         ToolCallback weatherTool = FunctionToolCallback.builder("get_weather", new WeatherTool())
                 .description("Get weather for a given city")
                 .inputType(WeatherToolRequest.class)
