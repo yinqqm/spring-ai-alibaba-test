@@ -117,7 +117,7 @@ public class MessageTester {
     public void test5() throws MalformedURLException {
         //从远程图片读取
         //测试图像
-        ChatModel dashScopeChatModel = CreateChatClient.createDashScopeChatModelOfQWEN3Dot5plus();
+        ChatModel dashScopeChatModel = CreateChatClient.createDashScopeChatModelOfQWEN3Dot6plus();
         //创建一个图像类型的UserMessage
         UserMessage imageUserMessage = UserMessage.builder()
                 .text("描述这张图片的内容。")
@@ -140,7 +140,7 @@ public class MessageTester {
         //从本地图片读取
         String imagePath = "images/dog.jpg";
         //测试图像
-        ChatModel dashScopeChatModel = CreateChatClient.createDashScopeChatModelOfQWEN3Dot5plus();
+        ChatModel dashScopeChatModel = CreateChatClient.createDashScopeChatModelOfQWEN3Dot6plus();
         //创建一个图像类型的UserMessage
         UserMessage imageUserMessage = UserMessage.builder()
                 .text("描述这张图片的内容。")
