@@ -2,6 +2,7 @@ package com.ai.demo.tool;
 
 import com.alibaba.cloud.ai.dashscope.api.DashScopeApi;
 import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
+import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatOptions;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.ollama.OllamaChatModel;
@@ -50,6 +51,28 @@ public final class CreateChatClient {
                 .build();
         ChatModel chatModel = DashScopeChatModel.builder()
                 .dashScopeApi(dashScopeApi)
+                .build();
+        return chatModel;
+    }
+
+
+    /**
+     * 创建DashScope的ChatModel
+     *
+     * @return
+     */
+    public static ChatModel createDashScopeChatModelOfQWEN3Dot5plus() {
+        String apiKey = System.getenv("AI_DASHSCOPE_API_KEY");
+// 创建模型实例
+        DashScopeApi dashScopeApi = DashScopeApi.builder()
+                .apiKey(apiKey)
+                .build();
+        ChatModel chatModel = DashScopeChatModel.builder()
+                .dashScopeApi(dashScopeApi)
+                .defaultOptions(DashScopeChatOptions.builder()
+                        .model("qwen3.5-plus")
+                        .multiModel(true)
+                        .build())
                 .build();
         return chatModel;
     }
