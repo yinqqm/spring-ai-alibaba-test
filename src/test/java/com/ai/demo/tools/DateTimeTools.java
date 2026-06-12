@@ -12,10 +12,14 @@ import java.time.format.DateTimeFormatter;
  */
 public class DateTimeTools {
 
-    @Tool(description = "Get the current data and time in the user's timezone")
+    @Tool(description = "Get the current data, time, and week in the user's timezone")
     public String getCurrentDataTime() {
         System.out.println("-------------call getCurrentDataTime-----------------");
-        return LocalDateTime.now().atZone(LocaleContextHolder.getTimeZone().toZoneId()).toString();
+        //return LocalDateTime.now().atZone(LocaleContextHolder.getTimeZone().toZoneId()).toString();
+        var zonedDateTime = LocalDateTime.now().atZone(LocaleContextHolder.getTimeZone().toZoneId());
+        String dayOfWeek = zonedDateTime.getDayOfWeek()
+                .getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.CHINESE);
+        return zonedDateTime + ", " + dayOfWeek;
     }
 
     @Tool(description = "Set a user alarm for the given time, provided in ISO-8601 format")
