@@ -129,7 +129,7 @@ public class ToolsTester {
         ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
 
         String content = ChatClient.create(chatModel)
-                .prompt("What's the weather of beijing?")
+                .prompt("What's the weather of Beijing?")
                 .toolCallbacks(methodToolCallback) //这里要使用toolCallbacks方法来设置工具类
                 .call()
                 .content();
