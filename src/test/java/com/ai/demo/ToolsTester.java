@@ -3,14 +3,16 @@ package com.ai.demo;
 import com.ai.demo.agent.SearchTool;
 import com.ai.demo.agent.SearchToolInput;
 import com.ai.demo.tool.CreateChatClient;
-import com.ai.demo.tools.CustomToolCallResultConverter;
-import com.ai.demo.tools.CustomerTools;
-import com.ai.demo.tools.DateTimeTools;
-import com.ai.demo.tools.WeatherTools;
+import com.ai.demo.tools.*;
+import com.alibaba.cloud.ai.graph.agent.ReactAgent;
+import com.alibaba.cloud.ai.graph.checkpoint.savers.MemorySaver;
+import com.alibaba.cloud.ai.graph.exception.GraphRunnerException;
 import org.junit.Test;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.definition.ToolDefinition;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.ai.tool.metadata.ToolMetadata;
@@ -21,8 +23,98 @@ import org.springframework.ai.util.json.schema.JsonSchemaGenerator;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
 public class ToolsTester {
+
+
+    /**
+     * ToolCallbackProvider 接口动态提供工具
+     */
+    @Test
+    public void test9() throws GraphRunnerException {
+        ToolCallback weatherTool = FunctionToolCallback.builder("get weather",
+                        new WeatherTool())
+                .description("Get weather for a given city")
+                .inputType(WeatherToolRequest.class)
+                .build();
+
+        ToolCallback searchTool = FunctionToolCallback.builder("search",
+                        new SearchTool())
+                .description("Search for information")
+                .inputType(SearchToolInput.class)
+                .build();
+
+        ToolCallbackProvider toolCallbackProvider = new CustomToolCallbackProvider(List.of(weatherTool, searchTool));
+        //动态控制有哪些工具
+        //ToolCallbackProvider toolCallbackProvider = new CustomToolCallbackProvider(List.of(weatherTool, searchTool),false);
+
+        ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
+        ReactAgent agent = ReactAgent.builder()
+                .name("my agent")
+                .model(chatModel)
+                .toolCallbackProviders(toolCallbackProvider)
+                .systemPrompt("You are a helpful assistant with access to weather and search tools.")
+                .build();
+
+        AssistantMessage message = agent.call("北京的天气怎么样，今天发生了什么新闻");
+        System.out.println(message.getText());
+
+    }
+
+    /**
+     * 通过methodTools来设置tool
+     */
+    @Test
+    public void test8() throws GraphRunnerException {
+        ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
+
+        ReactAgent agent = ReactAgent.builder()
+                .methodTools(new DateTimeTools()) // 通过method tools指定tool
+                .name("my agent")
+                .model(chatModel)
+                .systemPrompt("You are a helpful assistant with date and time")
+                .build();
+
+        AssistantMessage message = agent.call("获取当前时间，并设置一个10分钟后的闹钟");
+        System.out.println(message.getText());
+    }
+
+
+    /**
+     * 通过tools方法直接使用tool
+     */
+    @Test
+    public void test7() throws GraphRunnerException {
+        ToolCallback weatherTool = FunctionToolCallback.builder("get weather",
+                new WeatherTool())
+                .description("Get weather for a given city")
+                .inputType(WeatherToolRequest.class)
+                .build();
+
+        ToolCallback searchTool = FunctionToolCallback.builder("search",
+                 new SearchTool())
+                .description("Search for information")
+                .inputType(SearchToolInput.class)
+                .build();
+
+        ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
+
+        ReactAgent agent = ReactAgent.builder()
+                .name("my_agent")
+                .tools(weatherTool,searchTool)
+                .model(chatModel)
+                .systemPrompt("You are a helpful assistant with access to weather and search tools.")
+                .saver(new MemorySaver())
+                .build();
+        AssistantMessage message = agent.call("北京的天气怎么样");
+        System.out.println(message.getText());
+    }
+
+
+    /**********ReactAgent中使用工具************/
+
+
 
     /**
      * 编程式Tool Call 自定义结果转换器
@@ -87,6 +179,7 @@ public class ToolsTester {
                 .builder("searching news", new SearchTool())//工具名称
                 .description("通过给定的关键字查询线上新闻并返回结果") //描述
                 .inputType(SearchToolInput.class)//输入类型
+                //.inputSchema(JsonSchemaGenerator.generateForType(SearchToolInput.class)) //自定义设置schema
                 .toolMetadata(ToolMetadata.builder()
                         .returnDirect(false)
                         .build()) //设置Tool的元数据信息，这里是否将数据直接返回给客户端
@@ -123,6 +216,7 @@ public class ToolsTester {
                         .name("getWeatherByCity")
                         .build())
                 .toolObject(new WeatherTools())
+                .toolMetadata(ToolMetadata.builder().returnDirect(false).build())
                 .toolMethod(method)
                 .build();
 
