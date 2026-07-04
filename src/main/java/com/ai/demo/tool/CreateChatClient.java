@@ -70,6 +70,12 @@ public final class CreateChatClient {
                 .build();
         ChatModel chatModel = DashScopeChatModel.builder()
                 .dashScopeApi(dashScopeApi)
+                //设置option是否执行Tooling Call
+//                .defaultOptions(
+//                        DashScopeChatOptions.builder()
+//                        .internalToolExecutionEnabled(Boolean.FALSE)
+//                        .model("qwen-plus")
+//                        .build())
                 .build();
         return chatModel;
     }

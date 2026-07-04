@@ -1,6 +1,7 @@
 package com.ai.demo.agent;
 
 import org.springframework.ai.chat.model.ToolContext;
+import org.springframework.ai.tool.annotation.ToolParam;
 
 import java.util.function.BiFunction;
 
@@ -10,7 +11,7 @@ import java.util.function.BiFunction;
  */
 public class SearchTool implements BiFunction<SearchToolInput, ToolContext, String> {
     @Override
-    public String apply(SearchToolInput query, ToolContext toolContext) {
+    public String apply(@ToolParam(description = "封装查询关键字的类") SearchToolInput query, ToolContext toolContext) {
         String callTool = (String) toolContext.getContext().getOrDefault("call_tool", "N");
         System.out.println("get data from mateData:"+callTool);
 
