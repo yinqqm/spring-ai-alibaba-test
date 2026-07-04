@@ -17,6 +17,7 @@ import org.springframework.ai.tool.definition.ToolDefinition;
 import org.springframework.ai.tool.function.FunctionToolCallback;
 import org.springframework.ai.tool.metadata.ToolMetadata;
 import org.springframework.ai.tool.method.MethodToolCallback;
+import org.springframework.ai.tool.resolution.StaticToolCallbackResolver;
 import org.springframework.ai.tool.support.ToolDefinitions;
 import org.springframework.ai.tool.support.ToolUtils;
 import org.springframework.ai.util.json.schema.JsonSchemaGenerator;
@@ -26,6 +27,42 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 public class ToolsTester {
+
+
+    /**
+     * 工具名词解析方式使用Tool
+     *
+     */
+    @Test
+    public void test10() throws GraphRunnerException {
+        ToolCallback weatherTool = FunctionToolCallback.builder("get weather",
+                        new WeatherTool())
+                .description("Get weather for a given city")
+                .inputType(WeatherToolRequest.class)
+                .build();
+
+        ToolCallback searchTool = FunctionToolCallback.builder("search",
+                        new SearchTool())
+                .description("Search for information")
+                .inputType(SearchToolInput.class)
+                .build();
+
+        StaticToolCallbackResolver resolver = new StaticToolCallbackResolver(List.of(weatherTool, searchTool));
+
+        ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
+        ReactAgent agent = ReactAgent.builder()
+                .name("my agent")
+                .model(chatModel)
+                .description("An agent with multiple tools")
+                .instruction("You are a helpful assistant with access to calculator and search tools.")
+                .toolNames("get weather", "search")
+                .resolver(resolver)
+                .build();
+
+        AssistantMessage message = agent.call("北京天气怎么样?");
+        System.out.println(message);
+
+    }
 
 
     /**
@@ -45,9 +82,9 @@ public class ToolsTester {
                 .inputType(SearchToolInput.class)
                 .build();
 
-        ToolCallbackProvider toolCallbackProvider = new CustomToolCallbackProvider(List.of(weatherTool, searchTool));
+        //ToolCallbackProvider toolCallbackProvider = new CustomToolCallbackProvider(List.of(weatherTool, searchTool));
         //动态控制有哪些工具
-        //ToolCallbackProvider toolCallbackProvider = new CustomToolCallbackProvider(List.of(weatherTool, searchTool),false);
+        ToolCallbackProvider toolCallbackProvider = new CustomToolCallbackProvider(List.of(weatherTool, searchTool),false);
 
         ChatModel chatModel = CreateChatClient.createDashScopeChatModel();
         ReactAgent agent = ReactAgent.builder()

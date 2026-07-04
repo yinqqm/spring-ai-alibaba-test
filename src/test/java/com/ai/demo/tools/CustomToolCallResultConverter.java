@@ -28,13 +28,13 @@ public class CustomToolCallResultConverter implements ToolCallResultConverter {
             try {
                 // 方式1: 转换为 JSON 格式（推荐）
                 String json = objectMapper.writeValueAsString(customer);
-                return json;
+//                return json;
 
-                // 方式2: 转换为人类可读的自然语言描述
-                // return String.format("Customer found - ID: %d, Name: %s, Age: %d",
-                //         customer.getId(),
-                //         customer.getUserName(),
-                //         customer.getAge());
+                 //方式2: 转换为人类可读的自然语言描述
+                 return String.format("Customer found - ID: %d, Name: %s, Age: %d",
+                         customer.getId(),
+                         customer.getUserName(),
+                         customer.getAge());
 
             } catch (JsonProcessingException e) {
                 return "Error converting customer data: " + e.getMessage();
