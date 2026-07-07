@@ -42,7 +42,7 @@ public class MemoryTester {
         RunnableConfig config = RunnableConfig.builder()
                 .threadId("user0001")
                 .build();
-        AssistantMessage message = mysqlAgent.call("我是用户0001", config);
+        AssistantMessage message = mysqlAgent.call("我是谁?", config);
         System.out.println(message);
 
 
@@ -70,6 +70,7 @@ public class MemoryTester {
                 .model(chatModel)
                 .name("Mysql_Agent")
                 .build();
+        //mysqlAgent.call("你好，我是Bob");
         //不指定的话有一个默认的session
         AssistantMessage message = mysqlAgent.call("我是谁?");
         System.out.println(message);
